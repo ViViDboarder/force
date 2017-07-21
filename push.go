@@ -45,8 +45,7 @@ Deployment Options
 var (
 	namePaths     = make(map[string]string)
 	byName        = false
-	resourcepaths string
-	metaName      string
+	resourcepaths []string
 	metaFolder    string
 )
 
@@ -70,13 +69,13 @@ func init() {
 	cmdPush.Flag.BoolVar(ignoreWarningsFlag, "i", false, "set ignore warnings")
 
 	// Ways to push
-	cmdPush.Flag.Var(&resourcepaths, "f", "Path to resource(s)")
-	cmdPush.Flag.Var(&resourcepaths, "filepath", "Path to resource(s)")
-	cmdPush.Flag.Var(&testsToRun, "test", "Test(s) to run")
-	cmdPush.Flag.StringVar(&metadataType, "t", "", "Metatdata type")
-	cmdPush.Flag.StringVar(&metadataType, "type", "", "Metatdata type")
-	cmdPush.Flag.Var(&metadataName, "name", "name of metadata object")
-	cmdPush.Flag.Var(&metadataName, "n", "names of metadata object")
+	cmdPush.Flag.StringVar(resourcepath, "f", "Path to resource(s)")
+	cmdPush.Flag.StringVar(resourcepath, "filepath", "Path to resource(s)")
+	cmdPush.Flag.StringVar(testsToRun, "test", "Test(s) to run")
+	cmdPush.Flag.StringVar(metadataType, "t", "", "Metatdata type")
+	cmdPush.Flag.StringVar(metadataType, "type", "", "Metatdata type")
+	cmdPush.Flag.StringVar(metadataName, "name", "name of metadata object")
+	cmdPush.Flag.StringVar(metadataName, "n", "names of metadata object")
 	cmdPush.Run = runPush
 }
 
@@ -88,12 +87,12 @@ func argIsFile(fpath string) bool {
 }
 
 func runPush(cmd *Command, args []string) {
-	if strings.ToLower(metadataType) == "package" {
+	if strings.ToLower(*metadataType) == "package" {
 		pushPackage()
 		return
 	}
 	// Treat trailing args as file paths
-	resourcepaths = append(resourcepaths, args...)
+	resourcepaths = append(resourcepaths, *resourcepath, args...)
 	if len(resourcepaths) > 0 {
 		// It's not a package but does have a path. This could be a path to a file
 		// or to a folder. If it is a folder, we pickup the resources a different
@@ -102,7 +101,7 @@ func runPush(cmd *Command, args []string) {
 		pushByPaths(resourcepaths)
 	} else {
 		if len(metadataName) > 0 {
-			if len(metadataType) != 0 {
+			if len(*metadataType) != 0 {
 				validatePushByMetadataTypeCommand()
 				pushByMetadataType()
 			} else {
@@ -120,9 +119,9 @@ func isValidMetadataType() {
 	// Look to see if we can find any resource for that metadata type
 	root, err := GetSourceDir()
 	ExitIfNoSourceDir(err)
-	metaFolder = findMetadataTypeFolder(metadataType, root)
+	metaFolder = findMetadataTypeFolder(*metadataType, root)
 	if metaFolder == "" {
-		ErrorAndExit("No folders that contain %s metadata could be found.", metadataType)
+		ErrorAndExit("No folders that contain %s metadata could be found.", *metadataType)
 	}
 }
 
@@ -411,7 +410,7 @@ func pushByName() {
 			fname := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
 			for _, name := range metadataName {
 				if strings.EqualFold(fname, name) {
-					if len(metadataType) == 0 {
+					if len(*metadataType) == 0 {
 						metadataType = strings.ToLower(filepath.Base(filepath.Dir(path)))
 						if metadataType == "staticresources" {
 							metadataType = "StaticResource"
@@ -495,7 +494,7 @@ func deployOpts() *ForceDeployOptions {
 	if *runAllTestsFlag {
 		opts.TestLevel = "RunAllTestsInOrg"
 	}
-	opts.RunTests = testsToRun
+	opts.RunTests = *testsToRun
 	return &opts
 }
 
